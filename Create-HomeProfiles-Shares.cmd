@@ -7,7 +7,6 @@ REM https://technet.microsoft.com/en-us/library/jj649078(v=ws.11).aspx
 REM Create and share folders with permissions for home directories / redirected folders and profiles
 md e:\Home
 net share Home=e:\Home /GRANT:Users,CHANGE /GRANT:Administrators,FULL /CACHE:Automatic /REMARK:"User home folders"
-icacls e:\Home /grant Users:(S,RD,AD,X,RA)
 icacls e:\Home /inheritance:d
 icacls e:\Home /remove Users
 icacls e:\Home /grant Users:(S,RD,AD,X,RA)
