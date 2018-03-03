@@ -5,15 +5,17 @@ REM https://support.microsoft.com/en-us/help/274443/how-to-dynamically-create-se
 REM https://technet.microsoft.com/en-us/library/jj649078(v=ws.11).aspx
 
 REM Create and share folders with permissions for home directories / redirected folders and profiles
-md e:\Home
-net share Home=e:\Home /GRANT:Users,CHANGE /GRANT:Administrators,FULL /CACHE:Automatic /REMARK:"User home folders"
-icacls e:\Home /inheritance:d
-icacls e:\Home /remove Users
-icacls e:\Home /grant Users:(S,RD,AD,X,RA)
+SET Folder = E:\Home
+md %Folder%
+net share Home=%Folder% /GRANT:Users,CHANGE /GRANT:Administrators,FULL /CACHE:Automatic /REMARK:"User home folders"
+icacls %Folder% /inheritance:d
+icacls %Folder% /remove Users
+icacls %Folder% /grant Users:(S,RD,AD,X,RA)
 
 REM Create and share folders with permissions for profiles
-md e:\Profiles
-net share Profiles=e:\Profiles /GRANT:Users,CHANGE /GRANT:Administrators,FULL /CACHE:None /REMARK:"User profiles"
-icacls e:\Profiles /inheritance:d
-icacls e:\Profiles /remove Users
-icacls e:\Profiles /grant Users:(S,RD,AD,X,RA)
+SET Folder = E:\Profiles
+md %Folder%
+net share Profiles=%Folder% /GRANT:Users,CHANGE /GRANT:Administrators,FULL /CACHE:None /REMARK:"User profiles"
+icacls %Folder% /inheritance:d
+icacls %Folder% /remove Users
+icacls %Folder% /grant Users:(S,RD,AD,X,RA)
