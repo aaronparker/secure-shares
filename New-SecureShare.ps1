@@ -143,7 +143,6 @@ Else {
             Write-Error "Failed to create folder $Path with error $_."
         }
 
-
         # Clear permissions on the path so that we can re-create secure permissions
         If ($pscmdlet.ShouldProcess($Path, "Clearing NTFS permissions")) {
             Clear-NTFSAccess -Path $Path -DisableInheritance
