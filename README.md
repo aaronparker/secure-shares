@@ -19,17 +19,15 @@ Batch file that demonstrates using ICACLS and NET SHARE commands to create a fol
 
 PowerShell approach to creating a folder with secure permissions and sharing the folder. Currently this script works locally, with remote support intended for a future release.
 
-### Example
+### Examples
 
-Creates a secure share for the folder E:\Home named Home, with Offline Settings set to automatic.
+Create a secure share for the folder E:\Home named Home, with Offline Settings set to automatic.
 
 ```powershell
 .\New-SecureShare.ps1 -Path "E:\Home" -CachingMode Documents
 ```
 
-### Example
-
-Creates a secure share for the folder E:\Profiles named Profiles, with Offline Settings set to none and sets a custom description.
+Create a secure share for the folder E:\Profiles named Profiles, with Offline Settings set to none and sets a custom description.
 
 ```powershell
 .\New-SecureShare.ps1 -Path "E:\Profiles" -Description "User roaming profiles"
