@@ -5,17 +5,19 @@ REM https://support.microsoft.com/en-us/help/274443/how-to-dynamically-create-se
 REM https://technet.microsoft.com/en-us/library/jj649078(v=ws.11).aspx
 
 REM Create and share folders with permissions for home directories / redirected folders and profiles
-SET Folder = E:\Home
+SET Folder=Home
+SET Drive=E
 md %Folder%
-net share Home=%Folder% /GRANT:Users,CHANGE /GRANT:Administrators,FULL /CACHE:Automatic /REMARK:"User home folders"
+net share Home=%Drive%:\%Folder% /GRANT:Users,CHANGE /GRANT:Administrators,FULL /CACHE:Automatic /REMARK:"User home folders"
 icacls %Folder% /inheritance:d
 icacls %Folder% /remove Users
 icacls %Folder% /grant Users:(S,RD,AD,X,RA)
 
 REM Create and share folders with permissions for profiles
-SET Folder = E:\Profiles
+SET Folder=Profiles
+SET Drive=E
 md %Folder%
-net share Profiles=%Folder% /GRANT:Users,CHANGE /GRANT:Administrators,FULL /CACHE:None /REMARK:"User profiles"
+net share Profiles=%Drive%:\%Folder% /GRANT:Users,CHANGE /GRANT:Administrators,FULL /CACHE:None /REMARK:"User profiles"
 icacls %Folder% /inheritance:d
 icacls %Folder% /remove Users
 icacls %Folder% /grant Users:(S,RD,AD,X,RA)
