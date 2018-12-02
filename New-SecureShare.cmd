@@ -8,16 +8,16 @@ REM Create and share folders with permissions for home directories / redirected 
 SET Folder=Home
 SET Drive=E
 md %Folder%
-net share Home=%Drive%:\%Folder% /GRANT:Users,CHANGE /GRANT:Administrators,FULL /CACHE:Automatic /REMARK:"User home folders"
 icacls %Folder% /inheritance:d
 icacls %Folder% /remove Users
 icacls %Folder% /grant Users:(S,RD,AD,X,RA)
+net share Home=%Drive%:\%Folder% /GRANT:Users,CHANGE /GRANT:Administrators,FULL /CACHE:Automatic /REMARK:"User home folders"
 
 REM Create and share folders with permissions for profiles
 SET Folder=Profiles
 SET Drive=E
 md %Folder%
-net share Profiles=%Drive%:\%Folder% /GRANT:Users,CHANGE /GRANT:Administrators,FULL /CACHE:None /REMARK:"User profiles"
 icacls %Folder% /inheritance:d
 icacls %Folder% /remove Users
 icacls %Folder% /grant Users:(S,RD,AD,X,RA)
+net share Profiles=%Drive%:\%Folder% /GRANT:Users,CHANGE /GRANT:Administrators,FULL /CACHE:None /REMARK:"User profiles"
