@@ -3,7 +3,7 @@
 <#PSScriptInfo
     .VERSION 2.0
     .GUID f5fcfeee-d09e-48ce-b0b7-c68e23d64f66
-    .AUTHOR Aaron Parker, @stealthpuppy
+    .AUTHOR Aaron Parker
     .COMPANYNAME stealthpuppy
     .COPYRIGHT Aaron Parker, https://stealthpuppy.com
     .TAGS Secure Shares NTFS
@@ -30,7 +30,6 @@
     .NOTES
         Name: New-SecureShare.ps1
         Author: Aaron Parker
-        Twitter: @stealthpuppy
         
     .LINK
         https://stealthpuppy.com
@@ -66,44 +65,43 @@
         Description:
         Creates a secure share for the folder E:\Profiles named Profiles, with Offline Settings set to none and sets a custom description.
 #>
-[CmdletBinding(SupportsShouldProcess = $True, HelpUri = 'https://github.com/aaronparker/secure-shares')]
+[CmdletBinding(SupportsShouldProcess = $true, HelpUri = 'https://github.com/aaronparker/secure-shares')]
 [OutputType([System.Array])]
-Param (
-    [Parameter(Mandatory = $True, ValueFromPipeline = $True, ValueFromPipelineByPropertyName = $True, `
-            HelpMessage = 'Specify a target path for the share.')]
+param (
+    [Parameter(Mandatory = $true, ValueFromPipeline = $true, ValueFromPipelineByPropertyName = $true,
+        HelpMessage = 'Specify a target path for the share.')]
     [ValidateScript( {
-            if ( -Not ((Split-Path -Path $_) | Test-Path) ) {
+            if ( -not ((Split-Path -Path $_) | Test-Path) ) {
                 throw "Parent path $(Split-Path -Path $_) does not exist."
             }
             return $true
         })]
     [Alias('FullName', 'PSPath')]
-    [string] $Path,
+    [System.String] $Path,
 
-    [Parameter(Mandatory = $False, HelpMessage = 'Specify a description for the share.')]
-    [string] $Description = "Secure share with access-based enumeration. Created with PowerShell.",
+    [Parameter(Mandatory = $false, HelpMessage = 'Specify a description for the share.')]
+    [System.String] $Description = "Secure share with access-based enumeration. Created with PowerShell.",
 
-    [Parameter(Mandatory = $False, HelpMessage = 'Set the share caching mode. Use None for profile shares.')]
+    [Parameter(Mandatory = $false, HelpMessage = 'Set the share caching mode. Use None for profile shares.')]
     [ValidateSet('None', 'Manual', 'Documents', 'Programs', 'BranchCache')]
-    [string] $CachingMode = "None"
+    [System.String] $CachingMode = "None"
 )
 
 # Trust the PowerShell Gallery
-Function Install-PSGallery {
-    [CmdletBinding(SupportsShouldProcess = $True)]
-    Param()
-    If (Get-PSRepository | Where-Object { $_.Name -eq "PSGallery" -and $_.InstallationPolicy -ne "Trusted" }) {
-        Write-Verbose "Trusting the repository: PSGallery"
-        If ($pscmdlet.ShouldProcess("NuGet", "Installing Package Provider")) {
+function Install-PSGallery {
+    [CmdletBinding(SupportsShouldProcess = $true)]
+    param()
+    if (Get-PSRepository | Where-Object { $_.Name -eq "PSGallery" -and $_.InstallationPolicy -ne "Trusted" }) {
+        Write-Verbose -Message "Trusting the repository: PSGallery"
+        if ($pscmdlet.ShouldProcess("NuGet", "Installing Package Provider")) {
             try {
                 Install-PackageProvider -Name NuGet -MinimumVersion 2.8.5.208
             }
             catch {
-                Throw "Failed to install package provider NuGet with error $_."
-                Break
+                throw $_
             }
         }
-        If ($pscmdlet.ShouldProcess("PowerShell Gallery", "Trusting PowerShell Repository")) {
+        if ($pscmdlet.ShouldProcess("PowerShell Gallery", "Trusting PowerShell Repository")) {
             Set-PSRepository -Name PSGallery -InstallationPolicy Trusted
         }
     }
@@ -111,95 +109,92 @@ Function Install-PSGallery {
 
 # Get share name from $Path
 $share = $(Split-Path $Path -Leaf)
-If (Get-SmbShare -Name $share -ErrorAction SilentlyContinue) {
-    Write-Warning "$share share already exists."
-    $output = Get-SmbShare -Name $share -ErrorAction SilentlyContinue | Select-Object -First 1
-    Write-Output $output
+if (Get-SmbShare -Name $share -ErrorAction "SilentlyContinue") {
+    Write-Warning -Message "$share share already exists."
+    Get-SmbShare -Name $share -ErrorAction "SilentlyContinue" | Select-Object -First 1
 }
-Else {
+else {
     try {
         # Install the NTFSSecurity module from the PowerShell Gallery
-        If (!(Get-Module NTFSSecurity)) {
+        if (!(Get-Module -Name "NTFSSecurity")) {
             Install-PSGallery
-            If ($pscmdlet.ShouldProcess("NTFSSecurity", "Installing module")) {
-                Install-Module -Name NTFSSecurity -ErrorAction SilentlyContinue -Verbose
+            if ($pscmdlet.ShouldProcess("NTFSSecurity", "Installing module")) {
+                Install-Module -Name "NTFSSecurity" -ErrorAction "SilentlyContinue"
             }
         }
     }
     catch {
         Write-Error "Unable to install the module NTFSSecurity with error $_."
-        Break
+        break
     }
-    finally {
-        # Create the folder
-        try {
-            If (!(Test-Path -Path $Path)) {
-                If ($pscmdlet.ShouldProcess($Path, "Creating directory")) {
-                    New-Item -Path $Path -ItemType Directory > $Null
-                }
+
+    # Create the folder
+    try {
+        if (!(Test-Path -Path $Path)) {
+            if ($pscmdlet.ShouldProcess($Path, "Creating directory")) {
+                New-Item -Path $Path -ItemType "Directory" | Out-Null
             }
         }
-        catch {
-            Write-Error "Failed to create folder $Path with error $_."
-        }
+    }
+    catch {
+        Write-Error "Failed to create folder $Path with error $_."
+    }
 
-        # Clear permissions on the path so that we can re-create secure permissions
-        If ($pscmdlet.ShouldProcess($Path, "Clearing NTFS permissions")) {
-            Clear-NTFSAccess -Path $Path -DisableInheritance
-        }
+    # Clear permissions on the path so that we can re-create secure permissions
+    if ($pscmdlet.ShouldProcess($Path, "Clearing NTFS permissions")) {
+        Clear-NTFSAccess -Path $Path -DisableInheritance
+    }
 
-        # Add NTFS permissions for securely creating shares
-        # Administrators and System
-        If ($pscmdlet.ShouldProcess($Path, "Adding 'Administrators', 'System' with Full Control")) {
-            ForEach ($account in 'Administrators', 'System') {
-                $addNtfsParams = @{
-                    Path         = $Path
-                    Account      = $account
-                    AccessRights = 'FullControl'
-                }
-                Add-NTFSAccess @addNtfsParams
-            }
-        }
-
-        # Users - enable the ability to create a folder
-        If ($pscmdlet.ShouldProcess($Path, "Adding 'Users' rights to create sub-folders")) {
-            $addNtfsParams = @{
+    # Add NTFS permissions for securely creating shares
+    # Administrators and System
+    if ($pscmdlet.ShouldProcess($Path, "Adding 'Administrators', 'System' with Full Control")) {
+        foreach ($account in 'Administrators', 'System') {
+            $params = @{
                 Path         = $Path
-                Account      = 'Users'
-                AppliesTo    = 'ThisFolderOnly'
-                AccessRights = @('CreateDirectories', 'ListDirectory', 'AppendData', 'Traverse', 'ReadAttributes')
-            }
-            Add-NTFSAccess @addNtfsParams
-        }
-
-        # Creator Owner - users then get full control on the folder they've created
-        If ($pscmdlet.ShouldProcess($Path, "Adding 'CREATOR OWNER' with Full Control on sub-folders")) {
-            $addNtfsParams = @{
-                Path         = $Path
-                Account      = 'CREATOR OWNER'
-                AppliesTo    = 'SubfoldersAndFilesOnly'
+                Account      = $account
                 AccessRights = 'FullControl'
             }
-            Add-NTFSAccess @addNtfsParams
+            Add-NTFSAccess @params
         }
+    }
 
-        # Share the folder with access-based enumeration
-        If ($pscmdlet.ShouldProcess($Path, "Sharing")) {
-            $newShareParams = @{
-                Name                  = $share
-                Path                  = $Path
-                FolderEnumerationMode = 'AccessBased'
-                FullAccess            = 'Administrators'
-                ChangeAccess          = 'Authenticated Users'
-                ReadAccess            = 'Everyone'
-                CachingMode           = $CachingMode
-                Description           = $Description
-            }
-            New-SMBShare @newShareParams
+    # Users - enable the ability to create a folder
+    if ($pscmdlet.ShouldProcess($Path, "Adding 'Users' rights to create sub-folders")) {
+        $params = @{
+            Path         = $Path
+            Account      = 'Users'
+            AppliesTo    = 'ThisFolderOnly'
+            AccessRights = @('CreateDirectories', 'ListDirectory', 'AppendData', 'Traverse', 'ReadAttributes')
         }
+        Add-NTFSAccess @params
+    }
+
+    # Creator Owner - users then get full control on the folder they've created
+    if ($pscmdlet.ShouldProcess($Path, "Adding 'CREATOR OWNER' with Full Control on sub-folders")) {
+        $params = @{
+            Path         = $Path
+            Account      = 'CREATOR OWNER'
+            AppliesTo    = 'SubfoldersAndFilesOnly'
+            AccessRights = 'FullControl'
+        }
+        Add-NTFSAccess @params
+    }
+
+    # Share the folder with access-based enumeration
+    if ($pscmdlet.ShouldProcess($Path, "Sharing")) {
+        $params = @{
+            Name                  = $share
+            Path                  = $Path
+            FolderEnumerationMode = 'AccessBased'
+            FullAccess            = 'Administrators'
+            ChangeAccess          = 'Authenticated Users'
+            ReadAccess            = 'Everyone'
+            CachingMode           = $CachingMode
+            Description           = $Description
+        }
+        New-SMBShare @params
     }
 
     # Return share details (Get-SmbShare returns the shared folder twice)
-    $output = Get-SmbShare -Name $share -ErrorAction SilentlyContinue | Select-Object -First 1
-    Write-Output $output
+    Get-SmbShare -Name $share -ErrorAction "SilentlyContinue" | Select-Object -First 1
 }
